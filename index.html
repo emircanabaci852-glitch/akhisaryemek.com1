@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Akhisar Sipariş — Merkeziyetsiz Paket Yönetim Platformu</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="description" content="Akhisar'ın işletmeleri ve kuryeleri için merkeziyetsiz paket yönetim platformu.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Akhisar Sipariş">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --accent: #e63946;          /* kırmızı */
+            --accent-dark: #c1121f;
+            --bg: #ededed;
+            --bg-2: #dcdcdc;
+            --surface: #ffffff;
+            --dark: #0a0a0a;
+            --mid: #2d2d2d;
+            --text-soft: #6b6b6b;
+            --border: #cccccc;
+            --green: #22c55e;
+            --green-dark: #15803d;
+            --blue: #2563eb;
+            --orange: #f59e0b;
+            --warm: #f5f5f5;
+            --radius: 22px;
+            --radius-sm: 14px;
+            --radius-lg: 32px;
+            /* Güçlü kabartma claymorphism */
+            --shadow:
+                12px 12px 28px rgba(163,163,163,0.7),
+                -12px -12px 28px rgba(255,255,255,1),
+                inset 0 0 0 1px rgba(255,255,255,0.7);
+            --shadow-lg:
+                22px 22px 48px rgba(163,163,163,0.75),
+                -20px -20px 44px rgba(255,255,255,1),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+            --shadow-sm:
+                7px 7px 16px rgba(163,163,163,0.6),
+                -6px -6px 14px rgba(255,255,255,1);
+            --shadow-inset:
+                inset 9px 9px 18px rgba(163,163,163,0.65),
+                inset -7px -7px 14px rgba(255,255,255,1);
+            --shadow-dark:
+                12px 12px 28px rgba(0,0,0,0.4),
+                -4px -4px 14px rgba(255,255,255,0.12);
+            --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); }
+
+        body {
+            background: var(--bg);
+            color: var(--dark);
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ========== HEADER ========== */
+        header {
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(237,237,237,0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            position: sticky; top: 0; z-index: 1000;
+            border-bottom: 1px solid rgba(204,204,204,0.5);
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+        .brand {
+            font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px;
+            color: var(--dark); display: flex; align-items: center; gap: 10px;
+        }
+        .brand .logo-dot {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: var(--accent); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 800;
+            box-shadow: 4px 4px 12px rgba(230,57,70,0.35);
+        }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .user-pill {
+            background: var(--surface);
+            border: none; padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .user-pill:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+        .role-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+        .role-dot.pending { background: var(--orange); }
+        .role-dot.disabled { background: var(--accent); }
+
+        /* ========== MAIN CONTAINER ========== */
+        main {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 30px 24px;
+        }
+
+        /* ========== VIEWS ========== */
+        .view { display: none; animation: fadeIn 0.3s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========== LANDING (overhauled) ========== */
+        .landing-hero {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 70px 60px;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .landing-hero h1 {
+            font-size: 3.4rem; font-weight: 800;
+            color: var(--dark); letter-spacing: -2.5px;
+            line-height: 1.05; margin-bottom: 20px;
+        }
+        .landing-hero h1 em { color: var(--accent); font-style: normal; }
+        .landing-hero > p {
+            font-size: 1.1rem; color: var(--text-soft);
+            max-width: 600px; margin: 0 auto 32px; font-weight: 500;
+        }
+        .landing-cta-row {
+            display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+        }
+        .badge-decentralized {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--bg);
+            color: var(--dark);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+        }
+        .badge-decentralized .pulse-dot {
+            width: 9px; height: 9px; border-radius: 50%; background: var(--green);
+            animation: pulseG 1.6s infinite;
+        }
+        @keyframes pulseG {
+            0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
+            50% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        .feature-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 30px 26px;
+            box-shadow: var(--shadow);
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+        .feature-card .icon {
+            width: 60px; height: 60px;
+            border-radius: 18px;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .feature-card h3 {
+            font-size: 1.15rem; font-weight: 800;
+            margin-bottom: 8px; letter-spacing: -0.5px;
+        }
+        .feature-card p {
+            color: var(--text-soft); font-size: 0.92rem;
+            line-height: 1.55; font-weight: 500;
+        }
+
+        .pricing-card {
+            background: var(--dark); color: white;
+            border-radius: var(--radius-lg);
+            padding: 50px 40px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 40px;
+        }
+        .pricing-card h2 {
+            font-size: 2rem; font-weight: 800;
+            letter-spacing: -1.5px; margin-bottom: 12px;
+            color: white;
+        }
+        .pricing-card .price {
+            font-size: 4rem; font-weight: 800;
+            color: var(--accent); margin: 20px 0;
+            letter-spacing: -3px;
+            line-height: 1;
+        }
+        .pricing-card .price .small {
+            font-size: 1.1rem; color: rgba(255,255,255,0.55);
+            margin-left: 4px; font-weight: 500;
+        }
+        .pricing-card > p { color: rgba(255,255,255,0.75); font-weight: 500; margin-bottom: 24px; }
+        .pricing-features {
+            display: flex; flex-direction: column; gap: 10px;
+            text-align: left; max-width: 380px; margin: 0 auto 32px;
+        }
+        .pricing-features div {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.92rem; font-weight: 600;
+            color: rgba(255,255,255,0.85);
+        }
+        .pricing-features i { color: var(--green); }
+
+        /* ========== BUTTONS ========== */
+        .btn-main {
+            background: var(--dark); color: white;
+            border: 2px solid var(--dark);
+            padding: 16px 32px; border-radius: 16px;
+            font-weight: 700; font-size: 0.95rem;
+            cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 12px 12px 28px rgba(0,0,0,0.25), -6px -6px 18px rgba(255,255,255,0.95);
+        }
+        .btn-main:hover { transform: translateY(-2px); box-shadow: 16px 16px 36px rgba(0,0,0,0.32); }
+        .btn-main:active { transform: translateY(1px); box-shadow: inset 4px 4px 10px rgba(0,0,0,0.5); }
+        .btn-main:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+        .btn-accent { background: var(--accent); border-color: var(--accent); box-shadow: 12px 12px 28px rgba(230,57,70,0.4); }
+        .btn-accent:hover { box-shadow: 16px 16px 36px rgba(230,57,70,0.5); }
+
+        .btn-success { background: var(--green); border-color: var(--green); box-shadow: 12px 12px 28px rgba(34,197,94,0.4); }
+        .btn-success:hover { box-shadow: 16px 16px 36px rgba(34,197,94,0.5); }
+
+        .btn-outline {
+            background: var(--surface); color: var(--dark);
+            border: 2px solid var(--dark);
+            padding: 14px 28px; border-radius: 16px;
+            font-weight: 700; font-size: 0.92rem;
+            cursor: pointer;
+            transition: 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        .btn-outline:hover { background: var(--dark); color: white; transform: translateY(-2px); }
+
+        .btn-sm {
+            padding: 8px 16px; border-radius: 12px;
+            font-size: 0.82rem; font-weight: 700;
+            border: none; cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-sm-dark { background: var(--dark); color: white; box-shadow: var(--shadow-sm); }
+        .btn-sm-dark:hover { transform: translateY(-1px); }
+        .btn-sm-red { background: var(--accent); color: white; box-shadow: 4px 4px 12px rgba(230,57,70,0.35); }
+        .btn-sm-green { background: var(--green); color: white; box-shadow: 4px 4px 12px rgba(34,197,94,0.35); }
+        .btn-sm-outline { background: var(--surface); color: var(--dark); box-shadow: var(--shadow-sm); }
+
+        /* ========== FORMS ========== */
+        .form-card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 50px 44px;
+            box-shadow: var(--shadow-lg);
+            max-width: 480px;
+            margin: 40px auto;
+            text-align: center;
+        }
+        .form-icon {
+            width: 78px; height: 78px;
+            border-radius: 22px;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; color: var(--dark);
+            margin: 0 auto 24px;
+            box-shadow: var(--shadow-inset);
+        }
+        .form-card h2 {
+            font-size: 1.6rem; font-weight: 800;
+            letter-spacing: -1px; margin-bottom: 8px;
+            color: var(--dark);
+        }
+        .form-card > p {
+            color: var(--text-soft); font-size: 0.92rem;
+            margin-bottom: 24px; font-weight: 500;
+        }
+        .form-tabs {
+            display: flex; gap: 6px; padding: 6px;
+            background: var(--bg); border-radius: 14px;
+            box-shadow: var(--shadow-inset);
+            margin-bottom: 22px;
+        }
+        .form-tab {
+            flex: 1; background: transparent; border: none;
+            padding: 11px 14px; border-radius: 10px;
+            font-weight: 700; font-size: 0.88rem; color: var(--text-soft);
+            cursor: pointer; transition: 0.25s;
+        }
+        .form-tab.active {
+            background: var(--surface); color: var(--dark);
+            box-shadow: var(--shadow-sm);
+        }
+        .form-group { margin-bottom: 14px; text-align: left; }
+        .form-group label {
+            display: block; font-size: 0.78rem; font-weight: 700;
+            color: var(--mid); margin-bottom: 7px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .form-input, .form-select {
+            width: 100%; padding: 14px 18px;
+            border: none; border-radius: 14px;
+            font-family: var(--font); font-size: 0.92rem;
+            color: var(--dark); background: var(--bg);
+            outline: none; transition: 0.2s;
+            box-shadow: var(--shadow-inset);
+        }
+        .form-input:focus, .form-select:focus { box-shadow: var(--shadow-inset), 0 0 0 3px rgba(230,57,70,0.2); }
+        .form-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; margin-bottom: 14px;
+        }
+        .form-error {
+            background: #fff5f5; color: var(--accent);
+            border: 1px solid rgba(230,57,70,0.2);
+            border-radius: 10px; padding: 10px 14px;
+            font-size: 0.85rem; font-weight: 600;
+            margin-bottom: 14px; display: none;
+        }
+        .form-info {
+            background: #fff8e1; color: #b45309;
+            border-radius: 10px; padding: 12px 16px;
+            font-size: 0.85rem; font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        /* ========== PANELS ========== */
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 28px; flex-wrap: wrap; gap: 14px;
+        }
+        .panel-header h1 {
+            font-size: 1.8rem; font-weight: 800;
+            letter-spacing: -1.2px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .panel-header h1 i { color: var(--accent); }
+
+        .panel-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: var(--surface);
+            min-height: 160px;
+            border-radius: 28px;
+            padding: 22px 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .stat-card .stat-icon {
+            position: absolute; right: 16px; top: 16px;
+            font-size: 2.8rem;
+            opacity: 0.85;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));
+            animation: statFloat 4s ease-in-out infinite;
+        }
+        @keyframes statFloat {
+            0%,100% { transform: translateY(0) rotate(-3deg); }
+            50% { transform: translateY(-6px) rotate(3deg); }
+        }
+        .stat-card .stat-num {
+            font-size: 2.2rem; font-weight: 800;
+            letter-spacing: -1.5px; color: var(--dark);
+            line-height: 1;
+        }
+        .stat-card .stat-label {
+            font-size: 0.78rem; color: var(--text-soft);
+            font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.6px; margin-top: 6px;
+        }
+        .stat-card .stat-pill {
+            position: absolute; top: 18px; left: 22px;
+            background: var(--bg); padding: 5px 11px;
+            border-radius: 9px; font-size: 0.68rem;
+            font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.5px; box-shadow: var(--shadow-sm);
+        }
+        .stat-pill.warn { color: #b45309; background: #ffedd5; }
+        .stat-pill.ok { color: var(--green-dark); background: #d1fae5; }
+        .stat-pill.info { color: #1e40af; background: #dbeafe; }
+        .stat-pill.danger { color: #b91c1c; background: #fee2e2; }
+
+        /* ========== TABS ========== */
+        .tabs-bar {
+            display: flex; gap: 8px;
+            background: var(--bg); border-radius: 18px;
+            padding: 7px;
+            box-shadow: var(--shadow-inset);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            flex: 1; min-width: 140px;
+            background: transparent; border: none;
+            padding: 12px 18px; border-radius: 12px;
+            font-weight: 700; font-size: 0.88rem;
+            color: var(--text-soft); cursor: pointer;
+            transition: 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            white-space: nowrap;
+        }
+        .tab:hover:not(.active) { color: var(--dark); }
+        .tab.active {
+            background: var(--surface); color: var(--dark);
+            box-shadow: var(--shadow-sm);
+        }
+        .tab-section { display: none; }
+        .tab-section.active { display: block; animation: fadeIn 0.3s; }
+
+        /* ========== CARDS ========== */
+        .card {
+            background: var(--surface);
+            border-radius: 22px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 18px;
+        }
+        .card h3 {
+            font-size: 1.1rem; font-weight: 800;
+            margin-bottom: 16px; letter-spacing: -0.5px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* ========== PACKAGE CARD ========== */
+        .pkg-card {
+            background: var(--surface);
+            border-radius: 22px;
+            padding: 22px 26px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--accent);
+            display: flex; gap: 18px;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            animation: popIn 0.35s ease;
+        }
+        @keyframes popIn { from{opacity:0;transform:scale(0.95) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .pkg-info { flex: 1; min-width: 240px; }
+        .pkg-id {
+            font-size: 0.74rem; font-weight: 700;
+            color: var(--text-soft); text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 6px;
+        }
+        .pkg-status-line {
+            font-size: 0.82rem; font-weight: 700;
+            margin: 4px 0 10px;
+        }
+        .pkg-route {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin: 10px 0;
+            font-size: 0.88rem;
+        }
+        .pkg-route .from, .pkg-route .to {
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 600; color: var(--mid);
+            margin: 3px 0;
+        }
+        .pkg-route i { color: var(--accent); width: 18px; }
+        .pkg-meta {
+            display: flex; gap: 12px; flex-wrap: wrap;
+            font-size: 0.82rem; color: var(--text-soft);
+            font-weight: 600; margin-top: 8px;
+        }
+        .pkg-meta span { display: flex; align-items: center; gap: 5px; }
+        .pkg-fee {
+            background: var(--green); color: white;
+            border-radius: 10px; padding: 6px 14px;
+            font-weight: 800; font-size: 1rem;
+            display: inline-flex; align-items: center; gap: 6px;
+            box-shadow: 4px 4px 12px rgba(34,197,94,0.3);
+        }
+        .pkg-actions {
+            display: flex; gap: 8px;
+            flex-shrink: 0; flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ========== TOAST ========== */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--dark); color: white;
+            border-radius: 50px; padding: 14px 26px;
+            font-weight: 700; font-size: 0.9rem;
+            z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+            white-space: nowrap; max-width: 90vw;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { background: var(--green); }
+        .toast.error { background: var(--accent); }
+
+        /* ========== EMPTY STATE ========== */
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-soft);
+        }
+        .empty-state .ep-icon {
+            font-size: 3.5rem; opacity: 0.4;
+            display: block; margin-bottom: 14px;
+        }
+        .empty-state p { font-weight: 600; font-size: 1rem; }
+
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            max-width: 520px; width: 100%;
+            box-shadow: var(--shadow-lg);
+            max-height: 90vh; overflow-y: auto;
+            animation: modalIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+        .modal-box h2 {
+            font-size: 1.4rem; font-weight: 800;
+            letter-spacing: -0.8px; margin-bottom: 8px;
+        }
+        .modal-box > p {
+            color: var(--text-soft); font-size: 0.92rem;
+            margin-bottom: 22px; font-weight: 500;
+        }
+        .modal-actions {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .modal-actions > * { flex: 1; min-width: 140px; }
+
+        /* ========== TABLE ========== */
+        .data-table {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .data-table .table-head {
+            display: grid; padding: 14px 20px;
+            background: var(--bg);
+            font-size: 0.74rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.6px;
+            color: var(--text-soft);
+        }
+        .data-table .table-row {
+            display: grid; padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .data-table .table-row:last-child { border-bottom: none; }
+
+        /* ========== STATUS BADGES ========== */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.74rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 6px 12px; border-radius: 10px;
+        }
+        .status-badge.pending { background: #fef3c7; color: #b45309; }
+        .status-badge.active { background: #d1fae5; color: var(--green-dark); }
+        .status-badge.broadcast { background: #fee2e2; color: #b91c1c; }
+        .status-badge.assigned { background: #dbeafe; color: #1e40af; }
+        .status-badge.in-progress { background: #fef3c7; color: #b45309; }
+        .status-badge.delivered { background: #d1fae5; color: var(--green-dark); }
+        .status-badge.cancelled { background: #f3f4f6; color: #6b7280; }
+        .status-badge.expired { background: #f3f4f6; color: #9ca3af; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            header { padding: 14px 18px; }
+            .brand { font-size: 1.05rem; }
+            .brand .logo-dot { width: 28px; height: 28px; }
+            main { padding: 22px 16px; }
+            .landing-hero { padding: 50px 26px; border-radius: 28px; }
+            .landing-hero h1 { font-size: 2.4rem; letter-spacing: -1.5px; }
+            .landing-hero > p { font-size: 1rem; }
+            .pricing-card { padding: 36px 24px; }
+            .pricing-card .price { font-size: 3rem; }
+            .form-card { padding: 36px 26px; }
+            .form-row { grid-template-columns: 1fr; }
+            .panel-stats { grid-template-columns: 1fr 1fr; gap: 14px; }
+            .stat-card { min-height: 130px; padding: 18px; border-radius: 22px; }
+            .stat-card .stat-icon { font-size: 2.2rem; }
+            .stat-card .stat-num { font-size: 1.7rem; }
+            .panel-header h1 { font-size: 1.4rem; }
+            .pkg-card { padding: 18px; }
+            .tabs-bar { padding: 5px; }
+            .tab { padding: 10px 12px; font-size: 0.82rem; min-width: 110px; }
+        }
+        @media (max-width: 420px) {
+            .panel-stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================== HEADER ============================== -->
+<header>
+    <div class="brand" onclick="showView('landing')" style="cursor:pointer">
+        <div class="logo-dot">A</div>
+        <span>Akhisar Sipariş</span>
+    </div>
+    <div class="header-right" id="header-right">
+        <button class="btn-outline" style="padding:10px 22px;font-size:0.88rem;" onclick="showView('auth')">Giriş Yap</button>
+    </div>
+</header>
+
+<main>
+
+<!-- ============================== LANDING ============================== -->
+<div id="view-landing" class="view active">
+    <div class="landing-hero">
+        <span class="badge-decentralized">
+            <span class="pulse-dot"></span>
+            <span>Akhisar'da Aktif Merkeziyetsiz Platform</span>
+        </span>
+        <h1>İşletme ile Kurye Arasında <em>Direkt Köprü</em></h1>
+        <p>Akhisar Sipariş, restoran/işletme ve kuryeleri tek çatı altında buluşturur. Komisyon yok, sabit aylık üyelik. Paketinizi atıyın, bekleyen kurye anında alsın.</p>
+        <div class="landing-cta-row">
+            <button class="btn-main btn-accent" onclick="showAuth('signup')">Hemen Üye Ol — 1000₺/ay</button>
+            <button class="btn-outline" onclick="showAuth('login')">Giriş Yap</button>
+        </div>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="icon">📦</div>
+            <h3>Paket Gönder</h3>
+            <p>İşletmesin, paket bilgisini gir, ücreti belirle. Tek bir kuryeye gönder, rastgele ata veya tüm açık kuryelere yayınla — ilk kabul eden alır.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🛵</div>
+            <h3>İş Al, Para Kazan</h3>
+            <p>Kuryesin, açık olunca etrafındaki paketleri gör, ücretini beğenmediğini reddet. Kabul ettin mi sadece sen alırsın.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">⚡</div>
+            <h3>Anında Senkron</h3>
+            <p>Tüm aktarımlar gerçek zamanlı. Bir kurye paketi onayladığı anda diğer kuryelere "alındı" görünür — çakışma olmaz.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">💰</div>
+            <h3>Komisyon Yok</h3>
+            <p>İşletmeler ve kuryeler aylık 1000₺ sabit ücret öder. Ne ödersen onu alırsın, ek kesinti yok.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📊</div>
+            <h3>Tarih Aralığı Raporu</h3>
+            <p>İşletmeler hangi kuryeye ne kadar ödeme yaptığını, kuryeler ne kadar kazandığını günlük olarak görüyor.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🔒</div>
+            <h3>Güvenli & Sade</h3>
+            <p>Sadece onaylı üyeler sisteme giriş yapabilir. Admin her üyeliği inceler.</p>
+        </div>
+    </div>
+
+    <div class="pricing-card">
+        <h2>Tek Plan, Hepsi Dahil</h2>
+        <p>İşletme veya kurye — fark etmez. Tüm üyeler aynı koşullarda.</p>
+        <div class="price">1000<span class="small">₺/ay</span></div>
+        <div class="pricing-features">
+            <div><i class="fas fa-check-circle"></i> Sınırsız paket gönderimi (işletme)</div>
+            <div><i class="fas fa-check-circle"></i> Sınırsız iş alımı (kurye)</div>
+            <div><i class="fas fa-check-circle"></i> Anlık bildirim & senkron</div>
+            <div><i class="fas fa-check-circle"></i> Tarih aralığı kazanç raporu</div>
+            <div><i class="fas fa-check-circle"></i> Komisyon kesintisi yok</div>
+            <div><i class="fas fa-check-circle"></i> 7/24 sistem desteği</div>
+        </div>
+        <button class="btn-main btn-accent" onclick="showAuth('signup')" style="margin:0 auto;display:inline-flex;">Hemen Üye Ol</button>
+    </div>
+</div>
+
+<!-- ============================== AUTH ============================== -->
+<div id="view-auth" class="view">
+    <div class="form-card">
+        <div class="form-icon" id="auth-icon"><i class="fas fa-user-shield"></i></div>
+        <h2 id="auth-title">Giriş Yap</h2>
+        <p id="auth-sub">Hesabınızla devam edin.</p>
+
+        <div class="form-tabs">
+            <button class="form-tab active" id="tab-login" onclick="switchAuthMode('login')">Giriş</button>
+            <button class="form-tab" id="tab-signup" onclick="switchAuthMode('signup')">Kayıt Ol</button>
+        </div>
+
+        <div class="form-error" id="auth-error"></div>
+
+        <!-- LOGIN -->
+        <div id="auth-login-form">
+            <div class="form-group"><label>E-posta</label><input type="email" class="form-input" id="login-email" placeholder="ornek@mail.com"></div>
+            <div class="form-group"><label>Şifre</label><input type="password" class="form-input" id="login-pass" placeholder="••••••••"></div>
+            <button class="btn-main" onclick="doLogin()" style="width:100%;margin-top:8px;">Giriş Yap</button>
+            <p style="font-size:0.78rem;color:var(--text-soft);margin-top:14px;">Şifrenizi unuttuysanız admin ile iletişime geçin.</p>
+        </div>
+
+        <!-- SIGNUP -->
+        <div id="auth-signup-form" style="display:none;">
+            <div class="form-info">
+                ⚠️ Kayıt olduktan sonra <strong>1000₺ aylık üyelik</strong> ücretini admin'e yatırın. Onay sonrası giriş aktifleşir.
+            </div>
+            <div class="form-group">
+                <label>Hesap Türü</label>
+                <select class="form-select" id="signup-role">
+                    <option value="business">🏪 İşletme (Paket Gönderen)</option>
+                    <option value="courier">🛵 Kurye (Paket Alan)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Ad Soyad / İşletme Adı</label><input type="text" class="form-input" id="signup-name" placeholder="Mehmet Demir / Köfteci Hasan"></div>
+                <div class="form-group"><label>Telefon</label><input type="tel" class="form-input" id="signup-phone" placeholder="0532..."></div>
+            </div>
+            <div class="form-group"><label>E-posta</label><input type="email" class="form-input" id="signup-email" placeholder="ornek@mail.com"></div>
+            <div class="form-group"><label>Şifre (en az 6 karakter)</label><input type="password" class="form-input" id="signup-pass" placeholder="••••••••"></div>
+            <div class="form-group" id="signup-addr-group"><label>Adres (işletme için)</label><input type="text" class="form-input" id="signup-address" placeholder="Akhisar, Manisa"></div>
+            <button class="btn-main btn-accent" onclick="doSignup()" style="width:100%;margin-top:8px;">Kayıt Ol</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================== BUSINESS PANEL ============================== -->
+<div id="view-business" class="view">
+    <div class="panel-header">
+        <h1><i class="fas fa-store"></i> İşletme Paneli</h1>
+        <button class="btn-outline" onclick="doLogout()" style="padding:10px 18px;font-size:0.85rem;"><i class="fas fa-right-from-bracket"></i> Çıkış</button>
+    </div>
+
+    <div class="panel-stats" id="business-stats"></div>
+
+    <div class="tabs-bar">
+        <button class="tab active" onclick="switchTab('business','active',this)"><i class="fas fa-truck-fast"></i> Aktif Paketler</button>
+        <button class="tab" onclick="switchTab('business','create',this)"><i class="fas fa-plus-circle"></i> Yeni Paket</button>
+        <button class="tab" onclick="switchTab('business','history',this)"><i class="fas fa-history"></i> Geçmiş</button>
+        <button class="tab" onclick="switchTab('business','report',this)"><i class="fas fa-chart-line"></i> Tarih Raporu</button>
+    </div>
+
+    <div id="business-section-active" class="tab-section active">
+        <div id="business-active-list"></div>
+    </div>
+
+    <div id="business-section-create" class="tab-section">
+        <div class="card">
+            <h3><i class="fas fa-plus-circle" style="color:var(--accent)"></i> Yeni Paket Oluştur</h3>
+
+            <div class="form-row">
+                <div class="form-group"><label>Alıcı Adı</label><input type="text" class="form-input" id="pkg-recipient" placeholder="Ahmet Yılmaz"></div>
+                <div class="form-group"><label>Alıcı Telefonu</label><input type="tel" class="form-input" id="pkg-phone" placeholder="0532..."></div>
+            </div>
+            <div class="form-group"><label>Teslimat Adresi</label><input type="text" class="form-input" id="pkg-address" placeholder="Mahalle, sokak, no, kat"></div>
+            <div class="form-group"><label>Paket İçeriği / Not</label><input type="text" class="form-input" id="pkg-content" placeholder="2 adet pizza, 1 cola"></div>
+
+            <div class="form-row">
+                <div class="form-group"><label>Gönderim Ücreti (Kuryeye)</label><input type="number" class="form-input" id="pkg-fee" placeholder="50" min="1" step="1"></div>
+                <div class="form-group"><label>Ödeme Türü</label>
+                    <select class="form-select" id="pkg-payment">
+                        <option value="cash">Nakit (Müşteriden)</option>
+                        <option value="card">Kart (Müşteriden)</option>
+                        <option value="paid">Ödendi (Online)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Atama Yöntemi</label>
+                <select class="form-select" id="pkg-assign-mode" onchange="onAssignModeChange()">
+                    <option value="broadcast">📢 Tüm Açık Kuryelere Yayınla (ilk kabul eden alır)</option>
+                    <option value="random">🎲 Rastgele Bir Kuryeye Ata</option>
+                    <option value="specific">🎯 Belirli Bir Kuryeye Gönder</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="pkg-courier-group" style="display:none;">
+                <label>Kurye Seç</label>
+                <select class="form-select" id="pkg-courier-id">
+                    <option value="">Yükleniyor...</option>
+                </select>
+            </div>
+
+            <button class="btn-main btn-accent" onclick="createPackage()" style="margin-top:8px;width:100%;">
+                <i class="fas fa-paper-plane"></i> Paketi Oluştur ve Gönder
+            </button>
+        </div>
+    </div>
+
+    <div id="business-section-history" class="tab-section">
+        <div id="business-history-list"></div>
+    </div>
+
+    <div id="business-section-report" class="tab-section">
+        <div class="card">
+            <h3><i class="fas fa-chart-line" style="color:var(--blue)"></i> Tarih Aralığı Raporu</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Başlangıç</label><input type="date" class="form-input" id="bus-report-start"></div>
+                <div class="form-group"><label>Bitiş</label><input type="date" class="form-input" id="bus-report-end"></div>
+            </div>
+            <button class="btn-main" onclick="runBusinessReport()" style="width:100%;"><i class="fas fa-chart-bar"></i> Hesapla</button>
+            <div id="business-report-result" style="margin-top:24px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================== COURIER PANEL ============================== -->
+<div id="view-courier" class="view">
+    <div class="panel-header">
+        <h1><i class="fas fa-motorcycle"></i> Kurye Paneli</h1>
+        <button class="btn-outline" onclick="doLogout()" style="padding:10px 18px;font-size:0.85rem;"><i class="fas fa-right-from-bracket"></i> Çıkış</button>
+    </div>
+
+    <!-- Çalışıyor / Çalışmıyor toggle -->
+    <div class="card" id="courier-work-card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div id="work-icon" style="width:50px;height:50px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:var(--shadow-sm);">🟢</div>
+            <div>
+                <div style="font-weight:800;font-size:1rem;" id="work-title">Açık Modunda</div>
+                <div style="font-size:0.82rem;color:var(--text-soft);font-weight:600;" id="work-sub">Yeni iş tekliflerini alıyorsunuz</div>
+            </div>
+        </div>
+        <button class="btn-outline" onclick="toggleWorking()" id="work-toggle" style="padding:10px 22px;font-size:0.85rem;">Kapalıya Geç</button>
+    </div>
+
+    <div class="panel-stats" id="courier-stats"></div>
+
+    <div class="tabs-bar">
+        <button class="tab active" onclick="switchTab('courier','offers',this)"><i class="fas fa-bell"></i> Yeni Teklifler</button>
+        <button class="tab" onclick="switchTab('courier','active',this)"><i class="fas fa-route"></i> Aktif İşim</button>
+        <button class="tab" onclick="switchTab('courier','history',this)"><i class="fas fa-check-double"></i> Geçmiş</button>
+        <button class="tab" onclick="switchTab('courier','report',this)"><i class="fas fa-chart-line"></i> Kazanç Raporu</button>
+    </div>
+
+    <div id="courier-section-offers" class="tab-section active">
+        <div id="courier-offers-list"></div>
+    </div>
+    <div id="courier-section-active" class="tab-section">
+        <div id="courier-active-list"></div>
+    </div>
+    <div id="courier-section-history" class="tab-section">
+        <div id="courier-history-list"></div>
+    </div>
+    <div id="courier-section-report" class="tab-section">
+        <div class="card">
+            <h3><i class="fas fa-chart-line" style="color:var(--green)"></i> Kazanç Raporum</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Başlangıç</label><input type="date" class="form-input" id="cou-report-start"></div>
+                <div class="form-group"><label>Bitiş</label><input type="date" class="form-input" id="cou-report-end"></div>
+            </div>
+            <button class="btn-main" onclick="runCourierReport()" style="width:100%;"><i class="fas fa-chart-bar"></i> Hesapla</button>
+            <div id="courier-report-result" style="margin-top:24px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================== ADMIN PANEL ============================== -->
+<div id="view-admin" class="view">
+    <div class="panel-header">
+        <h1><i class="fas fa-user-shield"></i> Admin Paneli</h1>
+        <button class="btn-outline" onclick="doLogout()" style="padding:10px 18px;font-size:0.85rem;"><i class="fas fa-right-from-bracket"></i> Çıkış</button>
+    </div>
+
+    <div class="panel-stats" id="admin-stats"></div>
+
+    <div class="tabs-bar">
+        <button class="tab active" onclick="switchTab('admin','users',this)"><i class="fas fa-users"></i> Kullanıcılar</button>
+        <button class="tab" onclick="switchTab('admin','packages',this)"><i class="fas fa-box"></i> Tüm Paketler</button>
+        <button class="tab" onclick="switchTab('admin','membership',this)"><i class="fas fa-credit-card"></i> Üyelikler</button>
+    </div>
+
+    <div id="admin-section-users" class="tab-section active">
+        <div id="admin-users-list"></div>
+    </div>
+    <div id="admin-section-packages" class="tab-section">
+        <div id="admin-packages-list"></div>
+    </div>
+    <div id="admin-section-membership" class="tab-section">
+        <div id="admin-membership-list"></div>
+    </div>
+</div>
+
+</main>
+
+<!-- ============================== TOAST ============================== -->
+<div class="toast" id="toast"><span id="toast-text"></span></div>
+
+<!-- ============================== MODAL ============================== -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- ============================== FIREBASE ============================== -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, push, update, remove, onValue, runTransaction, query, orderByChild, equalTo }
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence }
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey:            "AIzaSyDd8m7RL6Vi5SoRyK_fnOhmEhKNzoEmUMA",
+        authDomain:        "akhisaryemek-583fd.firebaseapp.com",
+        databaseURL:       "https://akhisaryemek-583fd-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId:         "akhisaryemek-583fd",
+        storageBucket:     "akhisaryemek-583fd.firebasestorage.app",
+        messagingSenderId: "702342527225",
+        appId:             "1:702342527225:web:d9cb41ed212d1516368a28"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getDatabase(app);
+    const auth = getAuth(app);
+
+    setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence error:', e));
+
+    // === EXPOSE HELPERS ===
+    window.fb = { db, auth, ref, set, get, push, update, remove, onValue, runTransaction, query, orderByChild, equalTo };
+
+    window.fbSignup = async function(email, password, profile) {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = cred.user.uid;
+        // Profili veritabanına yaz - "pending" olarak başla
+        await set(ref(db, `users/${uid}`), {
+            uid, email,
+            ...profile,
+            status: 'pending',  // admin onayı bekliyor
+            membershipPaid: false,
+            membershipExpiresAt: 0,
+            working: true,
+            createdAt: Date.now()
+        });
+        return uid;
+    };
+
+    window.fbLogin = async function(email, password) {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        return cred.user.uid;
+    };
+
+    window.fbLogout = async function() {
+        await signOut(auth);
+    };
+
+    window.fbGetUser = async function(uid) {
+        const snap = await get(ref(db, `users/${uid}`));
+        return snap.val();
+    };
+
+    window.fbUpdateUser = async function(uid, fields) {
+        await update(ref(db, `users/${uid}`), fields);
+    };
+
+    window.fbGetAllUsers = async function() {
+        const snap = await get(ref(db, 'users'));
+        const val = snap.val() || {};
+        return Object.values(val);
+    };
+
+    window.fbCreatePackage = async function(pkg) {
+        const newRef = push(ref(db, 'packages'));
+        const id = newRef.key;
+        const fullPkg = { ...pkg, id, createdAt: Date.now() };
+        await set(newRef, fullPkg);
+        return id;
+    };
+
+    window.fbUpdatePackage = async function(id, fields) {
+        await update(ref(db, `packages/${id}`), fields);
+    };
+
+    window.fbDeletePackage = async function(id) {
+        await remove(ref(db, `packages/${id}`));
+    };
+
+    // === TRANSACTIONAL ACCEPT ===
+    // Sadece bir kurye paketi kabul edebilsin diye atomic transaction
+    window.fbAcceptPackage = async function(packageId, courierId, courierName, courierPhone) {
+        const pkgRef = ref(db, `packages/${packageId}`);
+        const result = await runTransaction(pkgRef, (current) => {
+            if (current === null) return; // paket silinmiş
+            // Yalnızca status 'broadcast' veya 'pending_specific' / 'pending_random' ise + kurye atanmamışsa kabul edilebilir
+            if (current.acceptedBy) return; // zaten birisi aldı, abort
+            if (!['broadcast', 'pending_specific', 'pending_random'].includes(current.status)) return;
+            // specific veya random ise sadece atanmış kurye kabul edebilir
+            if ((current.status === 'pending_specific' || current.status === 'pending_random') &&
+                current.assignedCourierId !== courierId) return;
+            current.acceptedBy = courierId;
+            current.courierId = courierId;
+            current.courierName = courierName;
+            current.courierPhone = courierPhone || '';
+            current.status = 'accepted';
+            current.acceptedAt = Date.now();
+            return current;
+        });
+        return result.committed && result.snapshot.val()?.acceptedBy === courierId;
+    };
+
+    window.fbListenAll = function(path, callback) {
+        const r = ref(db, path);
+        return onValue(r, snap => {
+            const val = snap.val() || {};
+            callback(Object.values(val));
+        });
+    };
+
+    window.fbListenOne = function(path, callback) {
+        return onValue(ref(db, path), snap => callback(snap.val()));
+    };
+
+    onAuthStateChanged(auth, async user => {
+        if (user) {
+            const profile = await window.fbGetUser(user.uid);
+            window.currentUser = profile;
+            window.dispatchEvent(new CustomEvent('user-loaded', { detail: profile }));
+        } else {
+            window.currentUser = null;
+            window.dispatchEvent(new CustomEvent('user-logout'));
+        }
+    });
+
+    window.firebaseReady = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<script>
+// ===========================================================================
+// AKHİSAR SİPARİŞ — ANA UYGULAMA MANTIK
+// ===========================================================================
+
+let _packages = [];        // realtime cache
+let _users = [];           // realtime cache
+let _packageListener = null;
+let _userListener = null;
+let _authMode = 'login';   // 'login' | 'signup'
+
+// ===========================================================================
+// VIEW MANAGEMENT
+// ===========================================================================
+function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name)?.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showAuth(mode) {
+    showView('auth');
+    switchAuthMode(mode);
+}
+
+function switchAuthMode(mode) {
+    _authMode = mode;
+    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+    document.getElementById('auth-login-form').style.display = (mode === 'login') ? 'block' : 'none';
+    document.getElementById('auth-signup-form').style.display = (mode === 'signup') ? 'block' : 'none';
+    document.getElementById('auth-title').textContent = (mode === 'login') ? 'Giriş Yap' : 'Üye Ol';
+    document.getElementById('auth-sub').textContent = (mode === 'login')
+        ? 'Hesabınızla devam edin.'
+        : 'İşletme veya kurye olarak sisteme katılın.';
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+function switchTab(panel, section, el) {
+    document.querySelectorAll(`#view-${panel} .tab`).forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll(`#view-${panel} .tab-section`).forEach(s => s.classList.remove('active'));
+    document.getElementById(`${panel}-section-${section}`).classList.add('active');
+    // Tab açıldığında ilgili veriyi yenile
+    if (panel === 'business') {
+        if (section === 'active') renderBusinessActive();
+        if (section === 'create') loadCouriersForSelect();
+        if (section === 'history') renderBusinessHistory();
+        if (section === 'report') setDefaultReportDates('bus-report-start','bus-report-end');
+    }
+    if (panel === 'courier') {
+        if (section === 'offers') renderCourierOffers();
+        if (section === 'active') renderCourierActive();
+        if (section === 'history') renderCourierHistory();
+        if (section === 'report') setDefaultReportDates('cou-report-start','cou-report-end');
+    }
+    if (panel === 'admin') {
+        if (section === 'users') renderAdminUsers();
+        if (section === 'packages') renderAdminPackages();
+        if (section === 'membership') renderAdminMembership();
+    }
+}
+
+function setDefaultReportDates(startId, endId) {
+    const startInp = document.getElementById(startId);
+    const endInp = document.getElementById(endId);
+    if (!startInp || !endInp) return;
+    if (!endInp.value) {
+        const t = new Date();
+        endInp.value = t.toISOString().split('T')[0];
+        const s = new Date(); s.setDate(s.getDate() - 30);
+        startInp.value = s.toISOString().split('T')[0];
+    }
+}
+
+// ===========================================================================
+// TOAST + MODAL
+// ===========================================================================
+function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = msg;
+    el.className = 'toast show ' + type;
+    setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function showModal(html) {
+    document.getElementById('modal-box').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'modal-overlay') closeModal();
+});
+
+// ===========================================================================
+// AUTH FLOWS
+// ===========================================================================
+async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('auth-error');
+    if (!email || !password) {
+        errEl.textContent = 'E-posta ve şifre zorunlu.';
+        errEl.style.display = 'block';
+        return;
+    }
+    try {
+        await window.fbLogin(email, password);
+        // onAuthStateChanged tetiklenecek, sonra routeAfterLogin çağrılacak
+    } catch(e) {
+        errEl.textContent = decodeFirebaseError(e);
+        errEl.style.display = 'block';
+    }
+}
+
+async function doSignup() {
+    const role = document.getElementById('signup-role').value;
+    const name = document.getElementById('signup-name').value.trim();
+    const phone = document.getElementById('signup-phone').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-pass').value;
+    const address = document.getElementById('signup-address').value.trim();
+    const errEl = document.getElementById('auth-error');
+
+    if (!name || !phone || !email || !password) {
+        errEl.textContent = 'Tüm alanlar zorunlu.';
+        errEl.style.display = 'block';
+        return;
+    }
+    if (password.length < 6) {
+        errEl.textContent = 'Şifre en az 6 karakter olmalı.';
+        errEl.style.display = 'block';
+        return;
+    }
+    try {
+        await window.fbSignup(email, password, {
+            displayName: name,
+            phone,
+            address: role === 'business' ? address : '',
+            role
+        });
+        showToast('✅ Kayıt başarılı! Üyeliğin admin tarafından onaylanmasını bekleyin.', 'success');
+        switchAuthMode('login');
+        document.getElementById('login-email').value = email;
+    } catch(e) {
+        errEl.textContent = decodeFirebaseError(e);
+        errEl.style.display = 'block';
+    }
+}
+
+async function doLogout() {
+    await window.fbLogout();
+    showToast('Çıkış yapıldı.');
+    showView('landing');
+}
+
+function decodeFirebaseError(e) {
+    const m = e.message || String(e);
+    if (m.includes('email-already-in-use')) return 'Bu e-posta zaten kayıtlı.';
+    if (m.includes('user-not-found') || m.includes('wrong-password') || m.includes('invalid-credential')) return 'E-posta veya şifre hatalı.';
+    if (m.includes('weak-password')) return 'Şifre çok zayıf, en az 6 karakter olmalı.';
+    if (m.includes('invalid-email')) return 'Geçersiz e-posta formatı.';
+    if (m.includes('network')) return 'İnternet bağlantısını kontrol edin.';
+    return m.replace('Firebase: ', '');
+}
+
+// ===========================================================================
+// AUTH STATE CHANGE → ROUTE
+// ===========================================================================
+window.addEventListener('user-loaded', e => {
+    const user = e.detail;
+    if (!user) {
+        showView('landing');
+        return;
+    }
+    routeUser(user);
+});
+
+window.addEventListener('user-logout', () => {
+    showView('landing');
+    updateHeaderRight(null);
+    if (_packageListener) { _packageListener(); _packageListener = null; }
+    if (_userListener) { _userListener(); _userListener = null; }
+});
+
+function routeUser(user) {
+    updateHeaderRight(user);
+
+    // Pending üye ise mesaj göster, login'de tut
+    if (user.status === 'pending') {
+        showModal(`
+            <h2>⏳ Üyelik Onayı Bekliyor</h2>
+            <p>Hesabınız oluşturuldu ancak henüz admin tarafından onaylanmadı. <strong>1000₺ aylık üyelik</strong> ücretini admin'e yatırın ve onayı bekleyin.</p>
+            <p style="margin-top:14px;font-size:0.85rem;color:var(--text-soft);"><strong>Hesap:</strong> ${user.email}<br><strong>Tür:</strong> ${user.role === 'business' ? '🏪 İşletme' : '🛵 Kurye'}</p>
+            <div class="modal-actions">
+                <button class="btn-outline" onclick="closeModal();doLogout();">Çıkış Yap</button>
+            </div>
+        `);
+        return;
+    }
+
+    if (user.status === 'disabled' || user.status === 'banned') {
+        showModal(`
+            <h2>🚫 Hesap Devre Dışı</h2>
+            <p>Hesabınız admin tarafından askıya alınmış. İletişime geçin.</p>
+            <div class="modal-actions">
+                <button class="btn-outline" onclick="closeModal();doLogout();">Çıkış Yap</button>
+            </div>
+        `);
+        return;
+    }
+
+    // Üyelik süresi dolmuş mu kontrolü
+    if (user.role !== 'admin' && user.membershipExpiresAt && user.membershipExpiresAt < Date.now()) {
+        showModal(`
+            <h2>📅 Üyelik Süresi Doldu</h2>
+            <p>Aylık üyeliğinizin süresi dolmuş. Yenilemek için 1000₺ ödeme yapıp admin onayını bekleyin.</p>
+            <div class="modal-actions">
+                <button class="btn-outline" onclick="closeModal();doLogout();">Çıkış Yap</button>
+            </div>
+        `);
+        return;
+    }
+
+    // Aktif üye - paneline yönlendir
+    if (user.role === 'admin') {
+        showView('admin');
+        startAdminListeners();
+    } else if (user.role === 'business') {
+        showView('business');
+        startBusinessListeners();
+    } else if (user.role === 'courier') {
+        showView('courier');
+        startCourierListeners();
+    }
+}
+
+function updateHeaderRight(user) {
+    const el = document.getElementById('header-right');
+    if (!user) {
+        el.innerHTML = `<button class="btn-outline" style="padding:10px 22px;font-size:0.88rem;" onclick="showView('auth')">Giriş Yap</button>`;
+        return;
+    }
+    const roleLabel = user.role === 'admin' ? '👑 Admin'
+                    : user.role === 'business' ? '🏪 ' + (user.displayName || user.email)
+                    : '🛵 ' + (user.displayName || user.email);
+    const dotClass = user.status === 'pending' ? 'pending'
+                   : (user.status === 'disabled' || user.status === 'banned') ? 'disabled'
+                   : '';
+    el.innerHTML = `
+        <div class="user-pill" onclick="showProfile()">
+            <span class="role-dot ${dotClass}"></span>
+            <span>${roleLabel}</span>
+        </div>
+    `;
+}
+
+function showProfile() {
+    const u = window.currentUser;
+    if (!u) return;
+    const expiresStr = u.membershipExpiresAt ? new Date(u.membershipExpiresAt).toLocaleDateString('tr-TR') : 'Henüz onaylanmadı';
+    showModal(`
+        <h2>👤 Profilim</h2>
+        <p>Hesap bilgileriniz:</p>
+        <div style="background:var(--bg);border-radius:14px;padding:18px;margin:14px 0;font-size:0.92rem;line-height:2;">
+            <div><strong>Ad:</strong> ${u.displayName || '-'}</div>
+            <div><strong>E-posta:</strong> ${u.email}</div>
+            <div><strong>Telefon:</strong> ${u.phone || '-'}</div>
+            ${u.address ? `<div><strong>Adres:</strong> ${u.address}</div>` : ''}
+            <div><strong>Rol:</strong> ${u.role}</div>
+            <div><strong>Durum:</strong> ${u.status}</div>
+            <div><strong>Üyelik bitiş:</strong> ${expiresStr}</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeModal()">Kapat</button>
+            <button class="btn-main btn-accent" onclick="closeModal();doLogout();"><i class="fas fa-right-from-bracket"></i> Çıkış</button>
+        </div>
+    `);
+}
+
+// ===========================================================================
+// REALTIME LISTENERS
+// ===========================================================================
+function startBusinessListeners() {
+    if (_packageListener) _packageListener();
+    _packageListener = window.fb.onValue(window.fb.ref(window.fb.db, 'packages'), snap => {
+        const v = snap.val() || {};
+        _packages = Object.values(v);
+        renderBusinessActive();
+        renderBusinessStats();
+    });
+    if (_userListener) _userListener();
+    _userListener = window.fb.onValue(window.fb.ref(window.fb.db, 'users'), snap => {
+        const v = snap.val() || {};
+        _users = Object.values(v);
+        loadCouriersForSelect();
+    });
+}
+
+function startCourierListeners() {
+    if (_packageListener) _packageListener();
+    _packageListener = window.fb.onValue(window.fb.ref(window.fb.db, 'packages'), snap => {
+        const v = snap.val() || {};
+        _packages = Object.values(v);
+        renderCourierOffers();
+        renderCourierActive();
+        renderCourierStats();
+    });
+    if (_userListener) _userListener();
+    _userListener = window.fb.onValue(window.fb.ref(window.fb.db, `users/${window.currentUser.uid}`), snap => {
+        const v = snap.val();
+        if (v) {
+            window.currentUser = v;
+            updateWorkingUI();
+        }
+    });
+    updateWorkingUI();
+}
+
+function startAdminListeners() {
+    if (_packageListener) _packageListener();
+    _packageListener = window.fb.onValue(window.fb.ref(window.fb.db, 'packages'), snap => {
+        const v = snap.val() || {};
+        _packages = Object.values(v);
+        renderAdminPackages();
+        renderAdminStats();
+    });
+    if (_userListener) _userListener();
+    _userListener = window.fb.onValue(window.fb.ref(window.fb.db, 'users'), snap => {
+        const v = snap.val() || {};
+        _users = Object.values(v);
+        renderAdminUsers();
+        renderAdminMembership();
+        renderAdminStats();
+    });
+}
+
+// ===========================================================================
+// BUSINESS PANEL
+// ===========================================================================
+function renderBusinessStats() {
+    const u = window.currentUser;
+    const myPkgs = _packages.filter(p => p.createdBy === u.uid);
+    const active = myPkgs.filter(p => !['delivered','cancelled','expired'].includes(p.status)).length;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayDelivered = myPkgs.filter(p => p.status === 'delivered' && (p.deliveredAt||0) >= today.getTime()).length;
+    const totalDelivered = myPkgs.filter(p => p.status === 'delivered').length;
+    const totalSpent = myPkgs.filter(p => p.status === 'delivered').reduce((s,p)=>s+(p.fee||0),0);
+
+    document.getElementById('business-stats').innerHTML = `
+        <div class="stat-card"><span class="stat-pill warn">AKTİF</span><div class="stat-icon">📦</div><div></div><div><div class="stat-num">${active}</div><div class="stat-label">Aktif Paket</div></div></div>
+        <div class="stat-card"><span class="stat-pill ok">BUGÜN</span><div class="stat-icon">✅</div><div></div><div><div class="stat-num">${todayDelivered}</div><div class="stat-label">Bugün Teslim</div></div></div>
+        <div class="stat-card"><span class="stat-pill info">TOPLAM</span><div class="stat-icon">🚚</div><div></div><div><div class="stat-num">${totalDelivered}</div><div class="stat-label">Toplam Teslim</div></div></div>
+        <div class="stat-card"><span class="stat-pill danger">ÖDEME</span><div class="stat-icon">💸</div><div></div><div><div class="stat-num">${totalSpent.toFixed(0)}₺</div><div class="stat-label">Kuryelere Ödeme</div></div></div>
+    `;
+}
+
+function renderBusinessActive() {
+    const u = window.currentUser;
+    if (!u) return;
+    const myPkgs = _packages
+        .filter(p => p.createdBy === u.uid && !['delivered','cancelled','expired'].includes(p.status))
+        .sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    const el = document.getElementById('business-active-list');
+    if (myPkgs.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">📦</span><p>Aktif paketiniz yok.<br><br><button class="btn-main btn-accent" onclick="document.querySelector('[onclick*=create]').click()">Yeni Paket Oluştur</button></p></div>`;
+        return;
+    }
+    el.innerHTML = myPkgs.map(p => renderPackageCard(p, 'business')).join('');
+}
+
+function renderBusinessHistory() {
+    const u = window.currentUser;
+    if (!u) return;
+    const myPkgs = _packages
+        .filter(p => p.createdBy === u.uid && ['delivered','cancelled','expired'].includes(p.status))
+        .sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    const el = document.getElementById('business-history-list');
+    if (myPkgs.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">📭</span><p>Henüz tamamlanan paket yok.</p></div>`;
+        return;
+    }
+    el.innerHTML = myPkgs.map(p => renderPackageCard(p, 'business-history')).join('');
+}
+
+async function loadCouriersForSelect() {
+    const sel = document.getElementById('pkg-courier-id');
+    if (!sel) return;
+    if (_users.length === 0) {
+        try { _users = await window.fbGetAllUsers(); } catch(e) { console.warn(e); }
+    }
+    const couriers = _users.filter(u => u.role === 'courier' && u.status === 'active' && (!u.membershipExpiresAt || u.membershipExpiresAt > Date.now()));
+    if (couriers.length === 0) {
+        sel.innerHTML = '<option value="">Aktif kurye yok</option>';
+        return;
+    }
+    sel.innerHTML = couriers.map(c => {
+        const onlineLabel = c.working ? '🟢' : '⚪';
+        return `<option value="${c.uid}">${onlineLabel} ${c.displayName || c.email}</option>`;
+    }).join('');
+}
+
+function onAssignModeChange() {
+    const mode = document.getElementById('pkg-assign-mode').value;
+    document.getElementById('pkg-courier-group').style.display = (mode === 'specific') ? 'block' : 'none';
+}
+
+async function createPackage() {
+    const u = window.currentUser;
+    const recipient = document.getElementById('pkg-recipient').value.trim();
+    const phone = document.getElementById('pkg-phone').value.trim();
+    const address = document.getElementById('pkg-address').value.trim();
+    const content = document.getElementById('pkg-content').value.trim();
+    const fee = parseFloat(document.getElementById('pkg-fee').value);
+    const payment = document.getElementById('pkg-payment').value;
+    const mode = document.getElementById('pkg-assign-mode').value;
+    const targetCourierId = document.getElementById('pkg-courier-id').value;
+
+    if (!recipient || !phone || !address) {
+        showToast('Alıcı bilgileri zorunlu.', 'error');
+        return;
+    }
+    if (!fee || fee <= 0) {
+        showToast('Geçerli bir gönderim ücreti girin.', 'error');
+        return;
+    }
+
+    let status, assignedCourierId = '', assignedCourierName = '';
+    if (mode === 'broadcast') {
+        status = 'broadcast'; // tüm açık kuryeler görür
+    } else if (mode === 'random') {
+        // rastgele aktif & açık kurye seç
+        const open = _users.filter(c => c.role === 'courier' && c.status === 'active' && c.working && (!c.membershipExpiresAt || c.membershipExpiresAt > Date.now()));
+        if (open.length === 0) {
+            showToast('Şu an açık kurye yok. Tüm açık kuryelere yayınlayın.', 'error');
+            return;
+        }
+        const pick = open[Math.floor(Math.random() * open.length)];
+        assignedCourierId = pick.uid;
+        assignedCourierName = pick.displayName || pick.email;
+        status = 'pending_random';
+    } else if (mode === 'specific') {
+        if (!targetCourierId) {
+            showToast('Bir kurye seçin.', 'error');
+            return;
+        }
+        const c = _users.find(x => x.uid === targetCourierId);
+        if (!c) { showToast('Kurye bulunamadı.', 'error'); return; }
+        assignedCourierId = c.uid;
+        assignedCourierName = c.displayName || c.email;
+        status = 'pending_specific';
+    }
+
+    const pkg = {
+        createdBy: u.uid,
+        businessName: u.displayName || u.email,
+        businessPhone: u.phone || '',
+        businessAddress: u.address || '',
+        recipient, phone, address, content,
+        fee, payment,
+        status,
+        assignedCourierId, assignedCourierName,
+        rejectedBy: {} // {courierId: timestamp} — kim reddetti
+    };
+
+    try {
+        await window.fbCreatePackage(pkg);
+        showToast(`📦 Paket oluşturuldu! (${mode === 'broadcast' ? 'Tüm açık kuryelere yayınlandı' : 'Kuryeye gönderildi'})`, 'success');
+        // formu temizle
+        ['pkg-recipient','pkg-phone','pkg-address','pkg-content','pkg-fee'].forEach(id => document.getElementById(id).value = '');
+        // Aktife geri dön
+        document.querySelector(`[onclick="switchTab('business','active',this)"]`).click();
+    } catch(e) {
+        console.error(e);
+        showToast('Hata: ' + e.message, 'error');
+    }
+}
+
+async function cancelPackage(id) {
+    if (!confirm('Bu paketi iptal etmek istediğinize emin misiniz?')) return;
+    try {
+        await window.fbUpdatePackage(id, { status: 'cancelled', cancelledAt: Date.now() });
+        showToast('Paket iptal edildi.', 'success');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+function runBusinessReport() {
+    const u = window.currentUser;
+    const startInp = document.getElementById('bus-report-start');
+    const endInp = document.getElementById('bus-report-end');
+    if (!startInp.value || !endInp.value) { showToast('Tarih aralığı seçin.', 'error'); return; }
+    const startTs = new Date(startInp.value + 'T00:00:00').getTime();
+    const endTs = new Date(endInp.value + 'T23:59:59').getTime();
+
+    const inRange = _packages.filter(p =>
+        p.createdBy === u.uid &&
+        p.status === 'delivered' &&
+        (p.deliveredAt || p.createdAt || 0) >= startTs &&
+        (p.deliveredAt || p.createdAt || 0) <= endTs
+    );
+
+    if (inRange.length === 0) {
+        document.getElementById('business-report-result').innerHTML = `<div class="empty-state"><span class="ep-icon">📭</span><p>Seçili aralıkta teslimat yok.</p></div>`;
+        return;
+    }
+
+    const byCourier = {};
+    inRange.forEach(p => {
+        const k = p.courierId || 'yok';
+        const name = p.courierName || '(yok)';
+        if (!byCourier[k]) byCourier[k] = { name, count: 0, payout: 0 };
+        byCourier[k].count++;
+        byCourier[k].payout += (p.fee || 0);
+    });
+    const rows = Object.values(byCourier).sort((a,b)=>b.count-a.count);
+    const totalP = rows.reduce((s,r)=>s+r.count,0);
+    const totalPay = rows.reduce((s,r)=>s+r.payout,0);
+
+    document.getElementById('business-report-result').innerHTML = `
+        <div class="panel-stats" style="margin-bottom:18px;">
+            <div class="stat-card"><span class="stat-pill info">PAKET</span><div class="stat-icon">📦</div><div></div><div><div class="stat-num">${totalP}</div><div class="stat-label">Toplam Teslim</div></div></div>
+            <div class="stat-card"><span class="stat-pill danger">ÖDEME</span><div class="stat-icon">💸</div><div></div><div><div class="stat-num">${totalPay.toFixed(0)}₺</div><div class="stat-label">Kuryelere Ödeme</div></div></div>
+        </div>
+        <div class="data-table">
+            <div class="table-head" style="grid-template-columns:2fr 1fr 1fr;">
+                <div>Kurye</div><div style="text-align:right;">Paket</div><div style="text-align:right;">Ödeme</div>
+            </div>
+            ${rows.map(r => `
+            <div class="table-row" style="grid-template-columns:2fr 1fr 1fr;">
+                <div style="font-weight:700;">${r.name}</div>
+                <div style="text-align:right;font-weight:700;">${r.count}</div>
+                <div style="text-align:right;font-weight:700;color:var(--accent);">${r.payout.toFixed(0)}₺</div>
+            </div>`).join('')}
+        </div>
+    `;
+}
+
+// ===========================================================================
+// COURIER PANEL
+// ===========================================================================
+function toggleWorking() {
+    const u = window.currentUser;
+    const newVal = !u.working;
+    window.fbUpdateUser(u.uid, { working: newVal });
+    showToast(newVal ? '🟢 Açıldınız - yeni teklifler gelecek' : '⚪ Kapandınız - yeni teklif almazsınız');
+}
+
+function updateWorkingUI() {
+    const u = window.currentUser;
+    if (!u || u.role !== 'courier') return;
+    const open = u.working !== false;
+    document.getElementById('work-icon').textContent = open ? '🟢' : '⚪';
+    document.getElementById('work-title').textContent = open ? 'Açık Modunda' : 'Kapalı Modunda';
+    document.getElementById('work-sub').textContent = open ? 'Yeni iş tekliflerini alıyorsunuz' : 'Yeni iş teklifi gelmiyor';
+    document.getElementById('work-toggle').textContent = open ? 'Kapalıya Geç' : 'Açığa Geç';
+}
+
+function renderCourierStats() {
+    const u = window.currentUser;
+    if (!u) return;
+    const myActive = _packages.filter(p => p.courierId === u.uid && ['accepted','at_pickup','en_route'].includes(p.status)).length;
+    const myDelivered = _packages.filter(p => p.courierId === u.uid && p.status === 'delivered');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayCount = myDelivered.filter(p => (p.deliveredAt||0) >= today.getTime()).length;
+    const todayEarn = myDelivered.filter(p => (p.deliveredAt||0) >= today.getTime()).reduce((s,p)=>s+(p.fee||0),0);
+    const totalEarn = myDelivered.reduce((s,p)=>s+(p.fee||0),0);
+
+    // Bekleyen teklifler
+    const myRejected = id => (_packages.find(p => p.id === id)?.rejectedBy || {})[u.uid];
+    const offers = _packages.filter(p => isOfferForCourier(p, u)).length;
+
+    document.getElementById('courier-stats').innerHTML = `
+        <div class="stat-card"><span class="stat-pill warn">YENİ</span><div class="stat-icon">🔔</div><div></div><div><div class="stat-num">${offers}</div><div class="stat-label">Yeni Teklif</div></div></div>
+        <div class="stat-card"><span class="stat-pill info">AKTİF</span><div class="stat-icon">🛵</div><div></div><div><div class="stat-num">${myActive}</div><div class="stat-label">Aktif İş</div></div></div>
+        <div class="stat-card"><span class="stat-pill ok">BUGÜN</span><div class="stat-icon">💰</div><div></div><div><div class="stat-num">${todayEarn.toFixed(0)}₺</div><div class="stat-label">${todayCount} paket bugün</div></div></div>
+        <div class="stat-card"><span class="stat-pill info">TOPLAM</span><div class="stat-icon">🧾</div><div></div><div><div class="stat-num">${totalEarn.toFixed(0)}₺</div><div class="stat-label">${myDelivered.length} paket toplam</div></div></div>
+    `;
+}
+
+// Bu paket bu kuryeye teklif olarak görünmeli mi?
+function isOfferForCourier(p, u) {
+    if (!u || u.working === false) return false;
+    if (p.acceptedBy) return false;
+    if ((p.rejectedBy || {})[u.uid]) return false; // reddetmişse görmesin
+    if (p.status === 'broadcast') return true;
+    if ((p.status === 'pending_specific' || p.status === 'pending_random') && p.assignedCourierId === u.uid) return true;
+    return false;
+}
+
+function renderCourierOffers() {
+    const u = window.currentUser;
+    if (!u) return;
+    const offers = _packages
+        .filter(p => isOfferForCourier(p, u))
+        .sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    const el = document.getElementById('courier-offers-list');
+    if (offers.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">🔔</span><p>Şu anda yeni teklif yok. ${u.working === false ? '<br><strong>"Açığa Geç"</strong> butonuyla açık moduna geçin.' : 'Bekleyin, yeni paketler düşecek.'}</p></div>`;
+        return;
+    }
+    el.innerHTML = offers.map(p => renderPackageCard(p, 'offer')).join('');
+}
+
+function renderCourierActive() {
+    const u = window.currentUser;
+    if (!u) return;
+    const active = _packages
+        .filter(p => p.courierId === u.uid && ['accepted','at_pickup','en_route'].includes(p.status))
+        .sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    const el = document.getElementById('courier-active-list');
+    if (active.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">🛵</span><p>Aktif işiniz yok. Tekliflere göz atın.</p></div>`;
+        return;
+    }
+    el.innerHTML = active.map(p => renderPackageCard(p, 'courier-active')).join('');
+}
+
+function renderCourierHistory() {
+    const u = window.currentUser;
+    if (!u) return;
+    const past = _packages
+        .filter(p => p.courierId === u.uid && p.status === 'delivered')
+        .sort((a,b) => (b.deliveredAt||0) - (a.deliveredAt||0));
+    const el = document.getElementById('courier-history-list');
+    if (past.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">📭</span><p>Henüz teslimat yok.</p></div>`;
+        return;
+    }
+    el.innerHTML = past.map(p => renderPackageCard(p, 'courier-history')).join('');
+}
+
+async function acceptPackage(id) {
+    const u = window.currentUser;
+    if (!confirm('Bu paketi kabul ediyor musunuz?')) return;
+    try {
+        const ok = await window.fbAcceptPackage(id, u.uid, u.displayName || u.email, u.phone || '');
+        if (ok) {
+            showToast('✅ Paket sizin! Aktif işlerinizde göreceksiniz.', 'success');
+            // Aktif işime geç
+            document.querySelector(`[onclick="switchTab('courier','active',this)"]`).click();
+        } else {
+            showToast('Üzgünüz, başka bir kurye sizden önce aldı.', 'error');
+        }
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function rejectPackage(id) {
+    const u = window.currentUser;
+    if (!confirm('Bu paketi reddediyor musunuz? Tekrar göstermeyeceğiz.')) return;
+    try {
+        // rejectedBy.{uid} = timestamp
+        await window.fbUpdatePackage(id, { [`rejectedBy/${u.uid}`]: Date.now() });
+        showToast('Reddedildi.');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function pickupPackage(id) {
+    try {
+        await window.fbUpdatePackage(id, { status: 'at_pickup', pickedAt: Date.now() });
+        showToast('🏪 Dükkana geldiniz olarak işaretlendi.');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function departPackage(id) {
+    try {
+        await window.fbUpdatePackage(id, { status: 'en_route', departedAt: Date.now() });
+        showToast('🛵 Yola çıktınız.');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function deliverPackage(id) {
+    try {
+        await window.fbUpdatePackage(id, { status: 'delivered', deliveredAt: Date.now() });
+        const p = _packages.find(x => x.id === id);
+        showToast(`📦 Teslim edildi! +${p?.fee || 0}₺ kazandınız.`, 'success');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+function runCourierReport() {
+    const u = window.currentUser;
+    const startInp = document.getElementById('cou-report-start');
+    const endInp = document.getElementById('cou-report-end');
+    if (!startInp.value || !endInp.value) { showToast('Tarih aralığı seçin.', 'error'); return; }
+    const startTs = new Date(startInp.value + 'T00:00:00').getTime();
+    const endTs = new Date(endInp.value + 'T23:59:59').getTime();
+
+    const inRange = _packages.filter(p =>
+        p.courierId === u.uid &&
+        p.status === 'delivered' &&
+        (p.deliveredAt || 0) >= startTs &&
+        (p.deliveredAt || 0) <= endTs
+    );
+
+    if (inRange.length === 0) {
+        document.getElementById('courier-report-result').innerHTML = `<div class="empty-state"><span class="ep-icon">📭</span><p>Seçili aralıkta teslimat yok.</p></div>`;
+        return;
+    }
+
+    const total = inRange.length;
+    const totalEarn = inRange.reduce((s,p)=>s+(p.fee||0),0);
+    const byDay = {};
+    inRange.forEach(p => {
+        const d = new Date(p.deliveredAt).toLocaleDateString('tr-TR');
+        if (!byDay[d]) byDay[d] = { count: 0, earn: 0 };
+        byDay[d].count++;
+        byDay[d].earn += (p.fee||0);
+    });
+    const days = Object.entries(byDay);
+    const avg = days.length ? total / days.length : 0;
+
+    document.getElementById('courier-report-result').innerHTML = `
+        <div class="panel-stats" style="margin-bottom:18px;">
+            <div class="stat-card"><span class="stat-pill info">PAKET</span><div class="stat-icon">📦</div><div></div><div><div class="stat-num">${total}</div><div class="stat-label">Teslim</div></div></div>
+            <div class="stat-card"><span class="stat-pill ok">KAZANÇ</span><div class="stat-icon">💰</div><div></div><div><div class="stat-num">${totalEarn.toFixed(0)}₺</div><div class="stat-label">Toplam</div></div></div>
+            <div class="stat-card"><span class="stat-pill warn">ORT.</span><div class="stat-icon">📊</div><div></div><div><div class="stat-num">${avg.toFixed(1)}</div><div class="stat-label">Günlük Ort.</div></div></div>
+        </div>
+        <div class="data-table">
+            <div class="table-head" style="grid-template-columns:2fr 1fr 1fr;">
+                <div>Tarih</div><div style="text-align:right;">Paket</div><div style="text-align:right;">Kazanç</div>
+            </div>
+            ${days.reverse().map(([d,v]) => `
+            <div class="table-row" style="grid-template-columns:2fr 1fr 1fr;">
+                <div style="font-weight:700;">${d}</div>
+                <div style="text-align:right;font-weight:700;">${v.count}</div>
+                <div style="text-align:right;font-weight:700;color:var(--green-dark);">${v.earn.toFixed(0)}₺</div>
+            </div>`).join('')}
+        </div>
+    `;
+}
+
+// ===========================================================================
+// PACKAGE CARD RENDER
+// ===========================================================================
+function renderPackageCard(p, mode) {
+    const statusInfo = getStatusInfo(p.status);
+    let actions = '';
+    let borderColor = statusInfo.color;
+
+    if (mode === 'offer') {
+        // Kurye yeni teklif görüyor
+        const tagText = p.status === 'broadcast' ? '📢 Tüm Açıklara Yayında'
+                      : p.status === 'pending_random' ? '🎲 Sana Rastgele Atandı'
+                      : '🎯 Sana Özel Gönderildi';
+        actions = `
+            <button class="btn-sm btn-sm-green" onclick="acceptPackage('${p.id}')"><i class="fas fa-check"></i> Kabul Et (${p.fee}₺)</button>
+            <button class="btn-sm btn-sm-outline" onclick="rejectPackage('${p.id}')"><i class="fas fa-times"></i> Reddet</button>
+        `;
+        return `
+        <div class="pkg-card" style="border-left-color:#f59e0b;">
+            <div class="pkg-info">
+                <div class="pkg-id">${tagText} · ${formatTime(p.createdAt)}</div>
+                <div style="font-size:1rem;font-weight:800;margin:6px 0;color:var(--dark);">📦 ${p.content || 'Paket'}</div>
+                <div class="pkg-route">
+                    <div class="from"><i class="fas fa-store"></i> Alış: ${p.businessName || 'İşletme'}${p.businessAddress ? ' · '+p.businessAddress : ''}</div>
+                    <div class="to"><i class="fas fa-location-dot"></i> Teslim: ${p.recipient} · ${p.address}</div>
+                </div>
+                <div class="pkg-meta">
+                    <span><i class="fas fa-phone"></i> ${p.phone}</span>
+                    <span><i class="fas fa-credit-card"></i> ${getPaymentLabel(p.payment)}</span>
+                </div>
+            </div>
+            <div class="pkg-actions">
+                <span class="pkg-fee">💰 ${p.fee}₺</span>
+                ${actions}
+            </div>
+        </div>`;
+    }
+
+    if (mode === 'courier-active') {
+        if (p.status === 'accepted') {
+            actions = `<button class="btn-sm btn-sm-dark" onclick="pickupPackage('${p.id}')"><i class="fas fa-store"></i> Dükkana Geldim</button>`;
+        } else if (p.status === 'at_pickup') {
+            actions = `<button class="btn-sm btn-sm-dark" onclick="departPackage('${p.id}')"><i class="fas fa-motorcycle"></i> Yola Çıktım</button>`;
+        } else if (p.status === 'en_route') {
+            actions = `<button class="btn-sm btn-sm-green" onclick="deliverPackage('${p.id}')"><i class="fas fa-check"></i> Teslim Edildi</button>`;
+        }
+        if (p.phone) actions += ` <a href="tel:${p.phone}" class="btn-sm btn-sm-outline" style="text-decoration:none;"><i class="fas fa-phone"></i></a>`;
+    }
+
+    if (mode === 'business') {
+        if (['broadcast','pending_specific','pending_random'].includes(p.status)) {
+            actions = `<button class="btn-sm btn-sm-red" onclick="cancelPackage('${p.id}')"><i class="fas fa-times"></i> İptal</button>`;
+        }
+        if (p.courierPhone && p.status !== 'delivered') {
+            actions += ` <a href="tel:${p.courierPhone}" class="btn-sm btn-sm-outline" style="text-decoration:none;"><i class="fas fa-phone"></i> Kurye</a>`;
+        }
+    }
+
+    return `
+    <div class="pkg-card" style="border-left-color:${borderColor};">
+        <div class="pkg-info">
+            <div class="pkg-id">PAKET #${p.id.slice(-6).toUpperCase()} · ${formatTime(p.createdAt)}</div>
+            <div class="pkg-status-line" style="color:${statusInfo.color};">${statusInfo.icon} ${statusInfo.label}${p.courierName?` · 🛵 ${p.courierName}`:''}</div>
+            <div style="font-size:0.95rem;font-weight:700;margin:4px 0;">📦 ${p.content || 'Paket'}</div>
+            <div class="pkg-route">
+                ${mode==='business'||mode==='business-history'?`<div class="to"><i class="fas fa-location-dot"></i> ${p.recipient} · ${p.address}</div>`:`<div class="from"><i class="fas fa-store"></i> ${p.businessName||''}</div><div class="to"><i class="fas fa-location-dot"></i> ${p.recipient} · ${p.address}</div>`}
+            </div>
+            <div class="pkg-meta">
+                <span><i class="fas fa-phone"></i> ${p.phone}</span>
+                <span><i class="fas fa-credit-card"></i> ${getPaymentLabel(p.payment)}</span>
+            </div>
+        </div>
+        <div class="pkg-actions">
+            <span class="pkg-fee">💰 ${p.fee}₺</span>
+            ${actions}
+        </div>
+    </div>`;
+}
+
+function getStatusInfo(s) {
+    const map = {
+        'broadcast': { label: 'Açık Kuryelere Yayında', icon: '📢', color: '#f59e0b' },
+        'pending_specific': { label: 'Belirli Kurye Onayı Bekliyor', icon: '🎯', color: '#f59e0b' },
+        'pending_random': { label: 'Rastgele Kurye Onayı Bekliyor', icon: '🎲', color: '#f59e0b' },
+        'accepted': { label: 'Kurye Onayladı', icon: '✅', color: 'var(--blue)' },
+        'at_pickup': { label: 'Kurye Dükkanda', icon: '🏪', color: 'var(--accent)' },
+        'en_route': { label: 'Yolda', icon: '🛵', color: 'var(--blue)' },
+        'delivered': { label: 'Teslim Edildi', icon: '✅', color: 'var(--green)' },
+        'cancelled': { label: 'İptal Edildi', icon: '❌', color: 'var(--text-soft)' },
+        'expired': { label: 'Süresi Doldu', icon: '⏰', color: 'var(--text-soft)' },
+    };
+    return map[s] || { label: s, icon: '•', color: 'var(--text-soft)' };
+}
+
+function getPaymentLabel(p) {
+    return p === 'cash' ? '💵 Nakit' : p === 'card' ? '💳 Kart' : p === 'paid' ? '✅ Ödendi' : p;
+}
+
+function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) {
+        return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ===========================================================================
+// ADMIN PANEL
+// ===========================================================================
+function renderAdminStats() {
+    const totalUsers = _users.length;
+    const pendingApproval = _users.filter(u => u.status === 'pending').length;
+    const activePkgs = _packages.filter(p => !['delivered','cancelled','expired'].includes(p.status)).length;
+    const todayPkgs = _packages.filter(p => {
+        const t = new Date(); t.setHours(0,0,0,0);
+        return (p.createdAt||0) >= t.getTime();
+    }).length;
+
+    document.getElementById('admin-stats').innerHTML = `
+        <div class="stat-card"><span class="stat-pill info">TOPLAM</span><div class="stat-icon">👥</div><div></div><div><div class="stat-num">${totalUsers}</div><div class="stat-label">Kayıtlı Kullanıcı</div></div></div>
+        <div class="stat-card"><span class="stat-pill warn">ONAY</span><div class="stat-icon">⏳</div><div></div><div><div class="stat-num">${pendingApproval}</div><div class="stat-label">Bekleyen Üyelik</div></div></div>
+        <div class="stat-card"><span class="stat-pill ok">AKTİF</span><div class="stat-icon">📦</div><div></div><div><div class="stat-num">${activePkgs}</div><div class="stat-label">Aktif Paket</div></div></div>
+        <div class="stat-card"><span class="stat-pill danger">BUGÜN</span><div class="stat-icon">🔥</div><div></div><div><div class="stat-num">${todayPkgs}</div><div class="stat-label">Bugünkü Paket</div></div></div>
+    `;
+}
+
+function renderAdminUsers() {
+    const el = document.getElementById('admin-users-list');
+    if (_users.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">👥</span><p>Kullanıcı yok.</p></div>`;
+        return;
+    }
+    el.innerHTML = `
+        <div class="data-table">
+            <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 1fr 1.5fr;">
+                <div>Kullanıcı</div><div>Rol</div><div>Durum</div><div>Üyelik Sonu</div><div style="text-align:right;">İşlem</div>
+            </div>
+            ${_users.map(u => {
+                const exp = u.membershipExpiresAt ? new Date(u.membershipExpiresAt).toLocaleDateString('tr-TR') : '—';
+                const expired = u.membershipExpiresAt && u.membershipExpiresAt < Date.now();
+                return `
+                <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1.5fr;">
+                    <div>
+                        <div style="font-weight:700;">${u.displayName || '(isimsiz)'}</div>
+                        <div style="font-size:0.78rem;color:var(--text-soft);">${u.email} ${u.phone?'· '+u.phone:''}</div>
+                    </div>
+                    <div style="font-weight:600;">${u.role === 'business' ? '🏪 İşletme' : u.role === 'courier' ? '🛵 Kurye' : '👑 Admin'}</div>
+                    <div><span class="status-badge ${u.status}">${u.status}</span></div>
+                    <div style="font-size:0.85rem;color:${expired?'var(--accent)':'var(--text-soft)'};font-weight:600;">${exp}</div>
+                    <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                        ${u.status === 'pending' ? `<button class="btn-sm btn-sm-green" onclick="approveUser('${u.uid}')"><i class="fas fa-check"></i></button>` : ''}
+                        ${u.status === 'active' ? `<button class="btn-sm btn-sm-red" onclick="disableUser('${u.uid}')"><i class="fas fa-ban"></i></button>` : ''}
+                        ${u.status === 'disabled' ? `<button class="btn-sm btn-sm-green" onclick="enableUser('${u.uid}')"><i class="fas fa-check"></i></button>` : ''}
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+async function approveUser(uid) {
+    if (!confirm('Bu kullanıcıyı onaylayıp aktifleştirmek istediğinize emin misiniz? (Ücreti aldığınızı varsayar.)')) return;
+    const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 gün
+    try {
+        await window.fbUpdateUser(uid, { status: 'active', membershipPaid: true, membershipExpiresAt: expiresAt });
+        showToast('✅ Kullanıcı onaylandı, üyelik 30 gün aktif.', 'success');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function disableUser(uid) {
+    if (!confirm('Bu kullanıcıyı askıya almak istediğinize emin misiniz?')) return;
+    try {
+        await window.fbUpdateUser(uid, { status: 'disabled' });
+        showToast('Kullanıcı askıya alındı.');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function enableUser(uid) {
+    try {
+        await window.fbUpdateUser(uid, { status: 'active' });
+        showToast('✅ Kullanıcı tekrar aktif.', 'success');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+async function extendMembership(uid) {
+    if (!confirm('Üyeliği 30 gün uzatmak istediğinize emin misiniz?')) return;
+    const u = _users.find(x => x.uid === uid);
+    const base = (u?.membershipExpiresAt && u.membershipExpiresAt > Date.now()) ? u.membershipExpiresAt : Date.now();
+    const expiresAt = base + 30 * 24 * 60 * 60 * 1000;
+    try {
+        await window.fbUpdateUser(uid, { status: 'active', membershipPaid: true, membershipExpiresAt: expiresAt });
+        showToast('✅ Üyelik 30 gün uzatıldı.', 'success');
+    } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+}
+
+function renderAdminPackages() {
+    const el = document.getElementById('admin-packages-list');
+    const sorted = _packages.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    if (sorted.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">📦</span><p>Hiç paket yok.</p></div>`;
+        return;
+    }
+    el.innerHTML = sorted.map(p => renderPackageCard(p, 'admin')).join('');
+}
+
+function renderAdminMembership() {
+    const el = document.getElementById('admin-membership-list');
+    const members = _users.filter(u => u.role !== 'admin');
+    if (members.length === 0) {
+        el.innerHTML = `<div class="empty-state"><span class="ep-icon">💳</span><p>Üye yok.</p></div>`;
+        return;
+    }
+    el.innerHTML = `
+        <div class="data-table">
+            <div class="table-head" style="grid-template-columns:2fr 1fr 1.5fr 1.5fr;">
+                <div>Üye</div><div>Rol</div><div>Bitiş Tarihi</div><div style="text-align:right;">İşlem</div>
+            </div>
+            ${members.map(u => {
+                const exp = u.membershipExpiresAt ? new Date(u.membershipExpiresAt).toLocaleDateString('tr-TR') : '—';
+                const expired = u.membershipExpiresAt && u.membershipExpiresAt < Date.now();
+                const daysLeft = u.membershipExpiresAt ? Math.ceil((u.membershipExpiresAt - Date.now()) / (24*60*60*1000)) : 0;
+                return `
+                <div class="table-row" style="grid-template-columns:2fr 1fr 1.5fr 1.5fr;">
+                    <div>
+                        <div style="font-weight:700;">${u.displayName || u.email}</div>
+                        <div style="font-size:0.78rem;color:var(--text-soft);">${u.email}</div>
+                    </div>
+                    <div>${u.role === 'business' ? '🏪' : '🛵'} ${u.role}</div>
+                    <div style="font-weight:700;color:${expired?'var(--accent)':daysLeft<7?'var(--orange)':'var(--green-dark)'};">
+                        ${exp} ${daysLeft > 0 ? `(${daysLeft}g)` : '(bitti)'}
+                    </div>
+                    <div style="text-align:right;">
+                        <button class="btn-sm btn-sm-green" onclick="extendMembership('${u.uid}')"><i class="fas fa-plus"></i> 30 gün uzat</button>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ===========================================================================
+// INIT
+// ===========================================================================
+window.addEventListener('firebase-ready', () => {
+    console.log('Firebase ready ✓');
+});
+
+// Module dışından bütün fonksiyonları erişilebilir yap
+window.showView = showView;
+window.showAuth = showAuth;
+window.switchAuthMode = switchAuthMode;
+window.switchTab = switchTab;
+window.doLogin = doLogin;
+window.doSignup = doSignup;
+window.doLogout = doLogout;
+window.showProfile = showProfile;
+window.closeModal = closeModal;
+window.toggleWorking = toggleWorking;
+window.onAssignModeChange = onAssignModeChange;
+window.createPackage = createPackage;
+window.cancelPackage = cancelPackage;
+window.runBusinessReport = runBusinessReport;
+window.acceptPackage = acceptPackage;
+window.rejectPackage = rejectPackage;
+window.pickupPackage = pickupPackage;
+window.departPackage = departPackage;
+window.deliverPackage = deliverPackage;
+window.runCourierReport = runCourierReport;
+window.approveUser = approveUser;
+window.disableUser = disableUser;
+window.enableUser = enableUser;
+window.extendMembership = extendMembership;
+
+</script>
+
+</body>
+</html>
